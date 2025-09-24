@@ -74,7 +74,44 @@ class ReflexAgent(Agent):
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
         "*** YOUR CODE HERE ***"
-        return successorGameState.getScore()
+        # Return best possible score (positive infinity) if win, worst possible score (negative infinity) if loss
+        if currentGameState.isWin():
+            return float('inf')  
+        if currentGameState.isLose():
+            return float('-inf') 
+        
+        score = successorGameState.getScore()
+        foodList = newFood.asList()
+        
+        # Find distance to the closest food particle
+        distToClosestFood = float('inf')
+        for food in foodList:
+            distToCurFood = manhattanDistance(newPos, food)
+            if distToCurFood < distToClosestFood:
+                distToClosestFood = distToCurFood
+
+        # Add reciprocal of distance to the closest food particle (closer food = better score)
+        score += 1 / distToClosestFood
+                
+        # For each ghost, add/subtract reciprocal of distance based on ghost's scared status
+        for i in range(0, len(newGhostStates)):
+            curGhost = newGhostStates[i]
+            curGhostScaredTime = newScaredTimes[i]
+            curGhostPos = curGhost.getPosition()
+            distToCurGhost = manhattanDistance(newPos, curGhostPos)
+
+            if curGhostScaredTime > 0:
+                # Add reciprocal of distance to each scared ghost (closer scared ghost = better score)
+                score += 1 / distToCurGhost
+            else:
+                if distToCurGhost > 0:  
+                    # Subtract reciprocal of distance to each normal ghost (closer normal ghost = worse score)
+                    score -= 1 / distToCurGhost
+                else: 
+                    # Return worst possible score if overlapping with normal ghost (Pacman death)
+                    return float('-inf')
+
+        return score
 
 def scoreEvaluationFunction(currentGameState):
     """
