@@ -268,16 +268,16 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         def alphaBetaMinimaxValue(state, agentIndex, depth, alpha, beta):
             """
             Recursive alpha-beta minimax.
-            - Pacman (agent 0) maximizes value.
-            - Ghosts (agents 1+) minimize value.
+            - Pacman maximizes value.
+            - Ghosts minimize value.
             """
             # terminal state or cutoff: we need to evaluate
             if isTerminal(state, agentIndex, depth):
                 return self.evaluationFunction(state)
 
-            numAgents = state.getNumAgents()
-            nextAgent = (agentIndex + 1) % numAgents
-            nextDepth = depth + 1 if nextAgent == 0 else depth
+            numAgents = state.getNumAgents() 
+            nextAgent = (agentIndex + 1) % numAgents #moves to the next agent in the cycle
+            nextDepth = depth + 1 if nextAgent == 0 else depth # increase depth if we're back at pacman (all agents moved)
 
             actions = state.getLegalActions(agentIndex)
 
@@ -285,24 +285,26 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             if agentIndex == 0:
                 value = float('-inf')
                 for action in actions:
-                    successor = state.generateSuccessor(agentIndex, action)
+                    successor = state.generateSuccessor(agentIndex, action) # get next state after action
+                    #recursively get minimax value of successor state
                     value = max(value, alphaBetaMinimaxValue(successor, nextAgent, nextDepth, alpha, beta))
                     # prune branch if value is definitely better for Pacman than best so far for min player
                     if value > beta:
                         return value  # cut off value
-                    alpha = max(alpha, value)
-                return value
+                    alpha = max(alpha, value) # update alpha
+                return value # return best value found for Pacman
             # GHOST (min)
             else:
                 value = float('inf')
                 for action in actions:
-                    successor = state.generateSuccessor(agentIndex, action)
+                    successor = state.generateSuccessor(agentIndex, action) # get next state after action
+					#recursively get minimax value of successor state
                     value = min(value, alphaBetaMinimaxValue(successor, nextAgent, nextDepth, alpha, beta))
                     # prume if value is definitely worse for Pacman than max so far for max player
                     if value < alpha:
                         return value  # Cut off
                     beta = min(beta, value)
-                return value
+                return value# return best value found for ghost
 
         # find Pacman move with best alpha-beta minimax value
         bestScore = float('-inf')
@@ -310,9 +312,9 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         alpha = float('-inf')
         beta = float('inf')
         for action in gameState.getLegalActions(0):  # pacmans's available moves
-            successor = gameState.generateSuccessor(0, action)
-            score = alphaBetaMinimaxValue(successor, 1, 0, alpha, beta)
-            if score > bestScore:
+            successor = gameState.generateSuccessor(0, action) # get state after pacman move
+            score = alphaBetaMinimaxValue(successor, 1, 0, alpha, beta) # get minimax value starting with ghost 1, depth 0
+            if score > bestScore: # update best score and action if we found a new best
                 bestScore = score
                 bestAction = action
             # update alpha for root (important for correct pruning on siblings)
