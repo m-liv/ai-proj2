@@ -250,82 +250,74 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
         Returns the minimax action using self.depth and self.evaluationFunction
         """
-        "*** YOUR CODE HERE ***"
         def isTerminal(state, agentIndex, depth):
             """
-            Checks whether the current state is terminal for search.
-
-            Terminal if:
-            - The depth limit for tree expansion is reached;
-            - The game state is a win or lose;
-            - The agent has no legal actions (cannot move further).
+            Checks if the search should stop:
+            - Game state is win or lose.
+            - Maximum search depth reached (full ply).
+            - No legal actions left for agent.
             """
-            # check for win or lose
             if state.isWin() or state.isLose():
-                return True
-            # if we finished a full round, check depth
+                return True # game is over, so cutoff
             if depth == self.depth:
-                return True
-            # if the agent cannot move, game basically over
+                return True  # max search depth has been reached
             if len(state.getLegalActions(agentIndex)) == 0:
-                return True
-            return False
+                return True # no way for agent to continue
+            return False #otherwise, continue searching
 
         def alphaBetaMinimaxValue(state, agentIndex, depth, alpha, beta):
             """
-            Recursively computes the minimax value for a given state.
-
-            Pacman (agent 0) tries to maximize the score.
-            Ghosts (agents 1+) try to minimize Pacman's score.
-
-            When all agents have moved, the search depth will increase.
+            Recursive alpha-beta minimax.
+            - Pacman (agent 0) maximizes value.
+            - Ghosts (agents 1+) minimize value.
             """
+            # terminal state or cutoff: we need to evaluate
             if isTerminal(state, agentIndex, depth):
-                # use evaluation function when terminal state or cut-off reached
                 return self.evaluationFunction(state)
 
             numAgents = state.getNumAgents()
-            # move to next agent; if we're back at Pacman, increase depth
             nextAgent = (agentIndex + 1) % numAgents
             nextDepth = depth + 1 if nextAgent == 0 else depth
 
             actions = state.getLegalActions(agentIndex)
 
-            # pacman acts as a maximizer: picks the best scoring move
+            # PACMAN (max)
             if agentIndex == 0:
-                bestValue = float('-inf')
+                value = float('-inf')
                 for action in actions:
                     successor = state.generateSuccessor(agentIndex, action)
-                    value = alphaBetaMinimaxValue(successor, nextAgent, nextDepth, alpha, beta)
-                    bestValue = max(bestValue, value)
-                    
-                    if bestValue > beta:
-                        return bestValue  
-                    alpha = max(alpha, bestValue)
-                return bestValue
-            # ghost acts as minimizer: picks the worst scoring move for Pacman
+                    value = max(value, alphaBetaMinimaxValue(successor, nextAgent, nextDepth, alpha, beta))
+                    # prune branch if value is definitely better for Pacman than best so far for min player
+                    if value > beta:
+                        return value  # cut off value
+                    alpha = max(alpha, value)
+                return value
+            # GHOST (min)
             else:
-                bestValue = float('inf')
+                value = float('inf')
                 for action in actions:
                     successor = state.generateSuccessor(agentIndex, action)
-                    value = alphaBetaMinimaxValue(successor, nextAgent, nextDepth, alpha, beta)
-                    bestValue = min(bestValue, value)
-                    if bestValue < alpha:
-                        return bestValue  # prune the remaining branches
-                    beta = min(beta, bestValue)
-                return bestValue
+                    value = min(value, alphaBetaMinimaxValue(successor, nextAgent, nextDepth, alpha, beta))
+                    # prume if value is definitely worse for Pacman than max so far for max player
+                    if value < alpha:
+                        return value  # Cut off
+                    beta = min(beta, value)
+                return value
 
-        # Pacman turn: choose action with highest minimax value
+        # find Pacman move with best alpha-beta minimax value
         bestScore = float('-inf')
         bestAction = None
-        for action in gameState.getLegalActions(0):  # Pacman's legal actions
+        alpha = float('-inf')
+        beta = float('inf')
+        for action in gameState.getLegalActions(0):  # pacmans's available moves
             successor = gameState.generateSuccessor(0, action)
-            score = alphaBetaMinimaxValue(successor, 1, 0, float('-inf'), float('inf'))  # Start search with ghost 1, depth 0, infinitely small alpha, and infinitely large beta
+            score = alphaBetaMinimaxValue(successor, 1, 0, alpha, beta)
             if score > bestScore:
                 bestScore = score
                 bestAction = action
+            # update alpha for root (important for correct pruning on siblings)
+            alpha = max(alpha, bestScore)
 
-        # return the optimal move for Pacman
         return bestAction
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
