@@ -411,10 +411,64 @@ def betterEvaluationFunction(currentGameState):
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
     evaluation function (question 5).
 
-    DESCRIPTION: <write something here so we know what you did>
+    DESCRIPTION: A better evaluation function that guides Pacman to:
+    - win quickly,
+    - eat food efficiently,
+    - avoid getting caught by ghosts unless they're scared,
+    - and take capsules wisely.
+    - and incorporates a small random factor to break ties.
     """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    from util import manhattanDistance
+
+    # return best/worst possible values for immediate win/loss
+    if currentGameState.isWin():
+        return float('inf')
+    if currentGameState.isLose():
+        return float('-inf')
+
+    # start with the current built-in score as our base
+    score = currentGameState.getScore()
+
+    # gather positions and lists needed for features
+    pacmanPos = currentGameState.getPacmanPosition()
+    foodList = currentGameState.getFood().asList()
+    ghostStates = currentGameState.getGhostStates()
+    capsules = currentGameState.getCapsules()
+
+    # our evaluation function will consider several features: the first is food collection
+    if foodList:
+        # find closest food distance; motivates Pacman to quickly eat available food
+        closestFoodDist = min(manhattanDistance(pacmanPos, food) for food in foodList)
+        score += 2.5 / closestFoodDist
+        # Fewer food pellets left is always good
+        score -= 4 * len(foodList)
+
+    # the second feature is capsule collection
+    # fewer capsules left means Pacman is progressing towards winning
+    score -= 8 * len(capsules)
+    if capsules:
+        closestCapDist = min(manhattanDistance(pacmanPos, cap) for cap in capsules)
+        score += 1.5 / (closestCapDist + 1)  # +1 just in case Pacman is on a capsule
+
+    # the third feature is ghost interaction
+    for ghost in ghostStates:
+        ghostDist = manhattanDistance(pacmanPos, ghost.getPosition())
+        if ghost.scaredTimer > 0:
+            # reward being close to scared ghosts (so Pacman chases them)
+            score += 18.0 / (ghostDist + 1)
+        else:
+            # punish for being too close to active ghosts
+            if ghostDist == 0:
+                return float('-inf')
+            elif ghostDist < 2:
+                score -= 300  # large penalty if death is likely
+            else:
+                score -= 2.0 / ghostDist  # small penalty when within range but not both adjacent
+
+    # small random factor to break ties randomly so Pacman doesn't get stuck
+    score += random.random() * 0.01
+
+    return score
 
 # Abbreviation
 better = betterEvaluationFunction
